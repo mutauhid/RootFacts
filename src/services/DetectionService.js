@@ -40,7 +40,7 @@ export class DetectionService {
   async predict(imageElement) {
     if (!this.model) return null;
 
-    const result = tf.tidy(() => {
+    const predictionsTensor = tf.tidy(() => {
       let tensor = tf.browser.fromPixels(imageElement);
       const imageSize = this.config?.imageSize || 224;
       tensor = tf.image.resizeBilinear(tensor, [imageSize, imageSize]);
@@ -49,10 +49,13 @@ export class DetectionService {
       const normalized = tensor.toFloat().sub(offset).div(offset);
       const batched = normalized.expandDims(0);
 
-      return this.model.predict(batched).dataSync();
+      return this.model.predict(batched);
     });
 
-    const classProbabilities = Array.from(result);
+    const classProbabilitiesData = await predictionsTensor.data();
+    predictionsTensor.dispose();
+
+    const classProbabilities = Array.from(classProbabilitiesData);
     let maxProb = 0;
     let maxIdx = 0;
 
